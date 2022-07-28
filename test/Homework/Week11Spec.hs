@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Homework.Week11Spec (
   main,
   spec
@@ -16,8 +18,8 @@ instance Arbitrary Battlefield where
     defenderArmy <- choose (1, max size 1)
     return (Battlefield attackerArmy defenderArmy)
 
-prop_subtractsTwoFromBattle :: Battlefield -> IO ()
-prop_subtractsTwoFromBattle field = do
+prop_atLeastOneUnitDies :: Battlefield -> IO ()
+prop_atLeastOneUnitDies field = do
   newField <- evalRandIO (battle (field :: Battlefield))
   let totalUnitsLeft = attackers newField + defenders newField
   checkTotalUnitsLeft totalUnitsLeft
@@ -36,8 +38,7 @@ prop_subtractsTwoFromBattle field = do
 prop_findsWinner :: Battlefield -> IO ()
 prop_findsWinner field = do
   newField <- evalRandIO (invade field)
-  newField `shouldSatisfy` \field ->
-    case field of
+  newField `shouldSatisfy` \case
       Battlefield _ 0 -> True
       Battlefield 1 _ -> True
       _ -> False
@@ -48,22 +49,16 @@ main = hspec spec
 spec :: Spec
 spec = do
   describe "battle" $ do
-    -- prop "subtracts two units from the battle" prop_subtractsTwoFromBattle
-    it "is pending" $ do
-      pending
+    prop "subtracts one or two units from the battle" prop_atLeastOneUnitDies
 
   describe "invade" $ do
-    -- prop "produces a winner" prop_findsWinner
-    it "is pending too" $ do
-      pending
+    prop "produces a winner" prop_findsWinner
 
   describe "successProb" $ do
     it "finds a low probability of success" $ do
-      pending
       newField <- evalRandIO (successProb (Battlefield 2 20))
       newField `shouldSatisfy` (0.1 >)
 
     it "finds a high probability of success" $ do
-      pending
       newField <- evalRandIO (successProb (Battlefield 20 2))
       newField `shouldSatisfy` (0.9 <)

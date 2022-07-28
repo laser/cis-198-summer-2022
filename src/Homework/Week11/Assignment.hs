@@ -1,8 +1,16 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Homework.Week11.Assignment where
+module Homework.Week11.Assignment (
+  Battlefield(..),
+  battle,
+  invade,
+  successProb
+) where
 
+import Control.Monad
 import Control.Monad.Random
+
+import Data.List
 
 ------------------------------------------------------------
 -- Die values
@@ -26,20 +34,44 @@ die = getRandom
 type Army = Int
 
 data Battlefield = Battlefield { attackers :: Army, defenders :: Army }
-  deriving (Show)
+  deriving Show
 
--- #2 (there is no assignment #1, really)
+-- #2 
+-- Simulate a single battle between two opposing armies. 
+-- Roll the dice, interpret the results, and update the
+-- two armies to reflect any casualties.
+dice :: Int -> Rand StdGen [DieValue]
+dice = flip replicateM die
+
+applyRolls :: Ord a => Battlefield -> (a, a) -> Battlefield
+applyRolls field (attack, defense)
+  | attack > defense = field { defenders = defenders field - 1 }
+  | otherwise        = field { attackers = attackers field - 1 }
+
 battle :: Battlefield -> Rand StdGen Battlefield
-battle = undefined
+battle field@(Battlefield attack defense) = do
+  let roll = \times -> flip replicateM die times
+
+  let effectiveAttackers = min 3 (attack - 1)
+  let effectiveDefenders = min 2 defense
+
+  attackRolls  <- sort <$> roll effectiveAttackers
+  defenseRolls <- sort <$> roll effectiveDefenders
+
+  let rolls = zip attackRolls defenseRolls
+
+  return $ foldl' applyRolls field rolls
 
 -- #3
 invade :: Battlefield -> Rand StdGen Battlefield
-invade = undefined
+invade field@(Battlefield attack defense)
+  | defense == 0 = return field
+  | attack  <= 1 = return field
+  | otherwise    = battle field >>= invade
 
 -- #4
-successProb :: Battlefield -> Rand StdGen Double
-successProb = undefined
+isSuccess :: Battlefield -> Bool
+isSuccess = (== 0) . defenders
 
--- #5
-exactSuccessProb :: Battlefield -> Double
-exactSuccessProb = undefined
+successProb :: Battlefield -> Rand StdGen Double
+successProb = fmap ((/ 1000) . genericLength . filter isSuccess) . replicateM 1000 . invade
