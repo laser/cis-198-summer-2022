@@ -45,12 +45,12 @@ dice = flip replicateM die
 
 applyRolls :: Ord a => Battlefield -> (a, a) -> Battlefield
 applyRolls field (attack, defense)
-  | attack > defense = field { defenders = defenders field - 1 }
-  | otherwise        = field { attackers = attackers field - 1 }
+  | attack > defense = field { defenders = defenders field - 1 } -- attacker wins
+  | otherwise        = field { attackers = attackers field - 1 } -- defender wins
 
 battle :: Battlefield -> Rand StdGen Battlefield
-battle field@(Battlefield attack defense) = do
-  let roll = \times -> flip replicateM die times
+battle bf@(Battlefield attack defense) = do
+  let roll = \n -> flip replicateM die n
 
   let effectiveAttackers = min 3 (attack - 1)
   let effectiveDefenders = min 2 defense
@@ -60,14 +60,16 @@ battle field@(Battlefield attack defense) = do
 
   let rolls = zip attackRolls defenseRolls
 
-  return $ foldl' applyRolls field rolls
+  return $ foldl' applyRolls bf rolls
 
 -- #3
+-- Simulate repeated battles, ending only when one
+-- side runs out of combatants.
 invade :: Battlefield -> Rand StdGen Battlefield
 invade field@(Battlefield attack defense)
   | defense == 0 = return field
   | attack  <= 1 = return field
-  | otherwise    = battle field >>= invade
+  | otherwise    = battle field >>= \b -> invade b
 
 -- #4
 isSuccess :: Battlefield -> Bool
